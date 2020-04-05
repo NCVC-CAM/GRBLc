@@ -1,0 +1,6 @@
+; GRBLc.def : DLL のモジュール パラメーターを宣言します。
+
+LIBRARY      "GRBLc"
+
+EXPORTS
+    ; 明示的なエクスポートはここへ記述できます

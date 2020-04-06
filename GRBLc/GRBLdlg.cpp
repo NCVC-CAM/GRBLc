@@ -877,7 +877,7 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 	using namespace boost::xpressive;
 	static	sregex	reIgnore  = ( '(' >> *(~as_xpr(')')) >> ')' ) | ( (as_xpr('O')|'N') >> +_d );
 	static	sregex	reOBS = (s1= bos >> '/' >> *_d) >> (s2= *_);
-	static	sregex	reMcode = 'M' >> (s1= +_d) >> !(s2= 'P' >> +_d) >> *(s3= upper >> +_d);
+	static	sregex	reMcode = 'M' >> (s1= +_d) >> !(s2= 'P' >> +_d) >> !(s3= 'L' >> +_d);
 
 	int		nResult = 0, nowTraceObj, nM99line;
 	char	szBlock[MAXREGBUF];
@@ -956,8 +956,8 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 				int nNewIndex = SearchSubprogram(nIndex, nMaxLoop, nProgNo);
 				if ( nNewIndex >= 0 ) {
 					strBlock = what[3].str();
-					int nRepeat = strBlock.length()>1 && strBlock.front()=='L' ? atoi(strBlock.substr(1).c_str()) : 1;
-					while ( nRepeat-- && nResult!=30 && bTrace && m_bCycleThread ) {
+					int nRepeat = strBlock.length() > 1 ? atoi(strBlock.substr(1).c_str()) : 1;
+					while ( nRepeat-- && bTrace && m_bCycleThread ) {
 						for ( int i=nNewIndex; i<nMaxLoop && bTrace && m_bCycleThread; i++ ) {
 							nResult = MainSendBlock(i, nMaxLoop, bTrace);
 							if ( nResult==30 || nResult==99 )

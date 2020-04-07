@@ -62,7 +62,7 @@ END_MESSAGE_MAP()
 // CGRBLdlg ダイアログ
 
 CGRBLdlg::CGRBLdlg(NCVCHANDLE hDoc) : CDialogEx(IDD_DIALOG1, NULL)
-	,m_eventQuery(FALSE, TRUE), m_eventCycleRecv(FALSE, TRUE)	// Manual event
+	,m_eventQuery(FALSE, TRUE)//, m_eventCycleRecv(FALSE, TRUE)	// Manual event
 {
 	m_hDoc = hDoc;
 	m_nc.dwSize = sizeof(NCDATA);
@@ -272,7 +272,7 @@ void CGRBLdlg::OnConnect()
 
 	m_bQueryThread = true;
 	m_eventQuery.ResetEvent();
-	m_eventCycleRecv.ResetEvent();
+//	m_eventCycleRecv.ResetEvent();
 	AfxBeginThread(QueryThreadFunc, this);
 }
 
@@ -302,7 +302,7 @@ void CGRBLdlg::OnSoftReset()
 			m_bCycleThreadSuspend = false;
 			m_pCycleThread->ResumeThread();
 		}
-		m_eventCycleRecv.SetEvent();
+//		m_eventCycleRecv.SetEvent();
 		m_eventCycle.Lock(EVENT_TIMEOUT);
 	}
 	SendCommand(char(0x18));
@@ -389,7 +389,7 @@ void CGRBLdlg::OnCycleStart()
 			m_bCycleThread = true;
 			m_pCycleThread = AfxBeginThread(CycleStartThreadFunc, this);
 			Sleep(AfxGetGRBLcApp()->GetOption()->GetIntOpt(grblI_QueryTime));
-			m_eventCycleRecv.SetEvent();	// first time
+//			m_eventCycleRecv.SetEvent();	// first time
 		}
 		break;
 	}
@@ -408,7 +408,7 @@ void CGRBLdlg::OnFeedHold()
 		if ( dwResult == WAIT_TIMEOUT ) {
 			m_eventSingle.SetEvent();
 		}
-		m_eventCycleRecv.SetEvent();
+//		m_eventCycleRecv.SetEvent();
 		SendCommand('~');
 		AddMessage("CycleMode cancel", msgInfo);
 		EnableControl(true);
@@ -513,7 +513,7 @@ bool CGRBLdlg::Disconnect(bool bForce)
 			m_bCycleThreadSuspend = false;
 			m_pCycleThread->ResumeThread();
 		}
-		m_eventCycleRecv.SetEvent();
+//		m_eventCycleRecv.SetEvent();
 		m_eventCycle.Lock(EVENT_TIMEOUT);
 	}
 	m_bQueryThread = false;
@@ -558,7 +558,7 @@ void CGRBLdlg::ResponseGRBL(const std::string& strRecv)
 		AddMessage("Resume->[Cycle Start] Stop->[Feed Hold]", msgInfo);
 		m_statGRBL = grblHOLD;	// Forced
 	}
-	m_eventCycleRecv.SetEvent();
+//	m_eventCycleRecv.SetEvent();
 }
 
 void CGRBLdlg::AddMessage(LPCTSTR lpszMsg, MSGadd e)
@@ -843,9 +843,7 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 	if ( pOpt->GetIntOpt(grblI_WithTrace) ) {
 		NCVC_TracePause(pDlg->m_hDoc);
 		NCVC_TraceStart(pDlg->m_hDoc);
-		int nowTraceObj = NCVC_TraceNextDraw(pDlg->m_hDoc) - 1;
-		if ( nowTraceObj >= 0 )
-			bTrace = NCVC_GetNCData(pDlg->m_hDoc, nowTraceObj, &pDlg->m_nc);
+		pDlg->m_nc.nLine = 0;
 	}
 	else
 		bTrace = false;
@@ -906,20 +904,12 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 		strBlock = what[2].str();
 	}
 
-	// Select send block
-	if ( m_bCycleThread ) {
-		m_lcSendList.SetItemState(nIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
-		m_lcSendList.EnsureVisible(nIndex, false);
-		strLine.Format("Line=%d/%d %s", nIndex+1, nMaxLoop, strBlock.c_str());
-		m_stLine.SetWindowText(strLine);
-	}
-
 	// Check Grbl
 	do {
 		Sleep(pOpt->GetIntOpt(grblI_QueryTime));
 	} while ( m_bCycleThread && m_statGRBL==grblRUN );
-	m_eventCycleRecv.Lock(EVENT_TIMEOUT);		// wait response
-	m_eventCycleRecv.ResetEvent();
+//	m_eventCycleRecv.Lock(EVENT_TIMEOUT);		// wait response
+//	m_eventCycleRecv.ResetEvent();
 	switch ( m_statGRBL ) {
 	case grblALARM:
 		m_bCycleThread = false;	// thread end (not send)
@@ -933,10 +923,16 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 	if ( !m_bCycleThread )
 		return nResult;
 
+	// Select send block
+	m_lcSendList.SetItemState(nIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
+	m_lcSendList.EnsureVisible(nIndex, false);
+	strLine.Format("Line=%d/%d %s", nIndex+1, nMaxLoop, strBlock.c_str());
+	m_stLine.SetWindowText(strLine);
+
 	// NCVC trace
 	while ( bTrace && m_bCycleThread && m_nc.nLine<nIndex ) {
 		NCVC_TraceStart(m_hDoc);
-		nowTraceObj = NCVC_TraceNextDraw(m_hDoc) - 1;
+		nowTraceObj = NCVC_TraceNextDraw(m_hDoc);
 		if ( nowTraceObj >= 0 )
 			bTrace = NCVC_GetNCData(m_hDoc, nowTraceObj, &m_nc);
 		else
@@ -973,7 +969,7 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 			nM99line = m_nc.nLine;
 			while ( bTrace && m_bCycleThread && m_nc.nLine==nM99line ) {
 				NCVC_TraceStart(m_hDoc);
-				nowTraceObj = NCVC_TraceNextDraw(m_hDoc) - 1;
+				nowTraceObj = NCVC_TraceNextDraw(m_hDoc);
 				if ( nowTraceObj >= 0 )
 					bTrace = NCVC_GetNCData(m_hDoc, nowTraceObj, &m_nc);
 			}

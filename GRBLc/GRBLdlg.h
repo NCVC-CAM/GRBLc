@@ -32,7 +32,7 @@ class CGRBLdlg : public CDialogEx, public serial::SerialObserver
 	CEvent		m_eventMonitoring,
 				m_eventQuery,
 				m_eventCycle,
-				m_eventCycleRecv,
+				//m_eventCycleRecv,
 				m_eventSingle;
 	CCriticalSection	m_exclusionSend;
 	bool		m_bQueryThread,

@@ -906,6 +906,14 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 		strBlock = what[2].str();
 	}
 
+	// Select send block
+	if ( m_bCycleThread ) {
+		m_lcSendList.SetItemState(nIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
+		m_lcSendList.EnsureVisible(nIndex, false);
+		strLine.Format("Line=%d/%d %s", nIndex+1, nMaxLoop, strBlock.c_str());
+		m_stLine.SetWindowText(strLine);
+	}
+
 	// Check Grbl
 	do {
 		Sleep(pOpt->GetIntOpt(grblI_QueryTime));
@@ -933,14 +941,6 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 			bTrace = NCVC_GetNCData(m_hDoc, nowTraceObj, &m_nc);
 		else
 			m_nc.nLine = nMaxLoop;	// end loop
-	}
-
-	// Select send block
-	if ( m_bCycleThread ) {
-		m_lcSendList.SetItemState(nIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
-		m_lcSendList.EnsureVisible(nIndex, false);
-		strLine.Format("Line=%d/%d %s", nIndex+1, nMaxLoop, strBlock.c_str());
-		m_stLine.SetWindowText(strLine);
 	}
 
 	// Check Mcode

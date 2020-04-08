@@ -848,11 +848,12 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 	CTimeSpan	tSpan;
 	CGRBLdlg* pDlg = reinterpret_cast<CGRBLdlg*>(pParam);
 	CGRBLcOption* pOpt = AfxGetGRBLcApp()->GetOption();
-	int		nEndCode = 0,
-			nMaxLoop = NCVC_GetNCBlockDataSize(pDlg->m_hDoc);
+	int		nEndCode = 0;
 	BOOL	bTrace = true;
 
 	pDlg->AddMessage("Cyelc Start", msgInfo);
+	pDlg->m_nMaxBlock  = NCVC_GetNCBlockDataSize(pDlg->m_hDoc);
+	pDlg->m_nMaxObject = NCVC_GetNCDataSize(pDlg->m_hDoc);
 	if ( pOpt->GetIntOpt(grblI_WithTrace) ) {
 		NCVC_TracePause(pDlg->m_hDoc);
 		NCVC_TraceStart(pDlg->m_hDoc);
@@ -862,19 +863,20 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 		bTrace = false;
 
 	// Main Loop
-	for ( int i=0; i<nMaxLoop && pDlg->m_bCycleThread && nEndCode!=30; i++ ) {
-		nEndCode = pDlg->MainSendBlock(i, nMaxLoop, bTrace);
+	for ( int i=0; i<pDlg->m_nMaxBlock && pDlg->m_bCycleThread && nEndCode!=30; i++ ) {
+		nEndCode = pDlg->MainSendBlock(i, bTrace);
 	}
 
+	if ( pOpt->GetIntOpt(grblI_WithTrace) )
+		NCVC_TraceStop(pDlg->m_hDoc);
+
 	if ( pDlg->m_bCycleThread ) {
-		pDlg->PostMessage(WM_CYCLE_END);
 		te = CTime::GetCurrentTime();
 		tSpan = te - ts;
 		CString	strTime( tSpan.Format("Total machining time %H:%M:%S") );
 		pDlg->AddMessage(strTime, msgInfo);
+		pDlg->PostMessage(WM_CYCLE_END);
 	}
-	if ( pOpt->GetIntOpt(grblI_WithTrace) )
-		NCVC_TraceStop(pDlg->m_hDoc);
 
 #ifdef _DEBUG
 	cout << "CGRBLdlg::CycleStartThreadFunc() end\n";
@@ -882,7 +884,7 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 	return 0;
 }
 
-int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
+int CGRBLdlg::MainSendBlock(int nIndex, BOOL& bTrace)
 {
 	using namespace boost::xpressive;
 	static	sregex	reIgnore  = ( '(' >> *(~as_xpr(')')) >> ')' ) | ( (as_xpr('O')|'N') >> +_d );
@@ -938,17 +940,17 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 	// Select send block
 	m_lcSendList.SetItemState(nIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
 	m_lcSendList.EnsureVisible(nIndex, false);
-	strLine.Format("Line=%d/%d %s", nIndex+1, nMaxLoop, strBlock.c_str());
+	strLine.Format("Line=%d/%d %s", nIndex+1, m_nMaxBlock, strBlock.c_str());
 	m_stLine.SetWindowText(strLine);
 
 	// NCVC trace
 	while ( bTrace && m_bCycleThread && m_nc.nLine<nIndex ) {
 		NCVC_TraceStart(m_hDoc);
 		nowTraceObj = NCVC_TraceNextDraw(m_hDoc);
-		if ( nowTraceObj >= 0 )
+		if ( 0<=nowTraceObj && nowTraceObj<m_nMaxObject )
 			bTrace = NCVC_GetNCData(m_hDoc, nowTraceObj, &m_nc);
 		else
-			m_nc.nLine = nMaxLoop;	// end loop
+			m_nc.nLine = m_nMaxBlock;	// end loop
 	}
 
 	// Check Mcode
@@ -961,13 +963,13 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 		case 98:
 			if ( what[2].length() > 1 ) {	// P_
 				int nProgNo = atoi(what[2].str().substr(1).c_str());
-				int nNewIndex = SearchSubprogram(nIndex, nMaxLoop, nProgNo);
+				int nNewIndex = SearchSubprogram(nIndex, nProgNo);
 				if ( nNewIndex >= 0 ) {
 					strBlock = what[3].str();
 					int nRepeat = strBlock.length() > 1 ? atoi(strBlock.substr(1).c_str()) : 1;
 					while ( nRepeat-- && bTrace && m_bCycleThread ) {
-						for ( int i=nNewIndex; i<nMaxLoop && bTrace && m_bCycleThread; i++ ) {
-							nResult = MainSendBlock(i, nMaxLoop, bTrace);
+						for ( int i=nNewIndex; i<m_nMaxBlock && bTrace && m_bCycleThread; i++ ) {
+							nResult = MainSendBlock(i, bTrace);
 							if ( nResult==30 || nResult==99 )
 								break;
 						}
@@ -982,8 +984,10 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 			while ( bTrace && m_bCycleThread && m_nc.nLine==nM99line ) {
 				NCVC_TraceStart(m_hDoc);
 				nowTraceObj = NCVC_TraceNextDraw(m_hDoc);
-				if ( nowTraceObj >= 0 )
+				if ( 0<=nowTraceObj && nowTraceObj<m_nMaxObject )
 					bTrace = NCVC_GetNCData(m_hDoc, nowTraceObj, &m_nc);
+				else
+					m_nc.nLine = m_nMaxBlock;
 			}
 			return 99;
 		}
@@ -1005,7 +1009,7 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 	return nResult;
 }
 
-int CGRBLdlg::SearchSubprogram(int nIndex, int nMaxLoop, int nProgNo)
+int CGRBLdlg::SearchSubprogram(int nIndex, int nProgNo)
 {
 	using namespace boost::xpressive;
 	static	sregex	reComment = '(' >> *(~as_xpr(')')) >> ')';
@@ -1014,7 +1018,7 @@ int CGRBLdlg::SearchSubprogram(int nIndex, int nMaxLoop, int nProgNo)
 	char	szBlock[MAXREGBUF];
 	string	strBlock;
 
-	for ( int i=nIndex+1; i<nMaxLoop && m_bCycleThread; i++ ) {
+	for ( int i=nIndex+1; i<m_nMaxBlock && m_bCycleThread; i++ ) {
 		NCVC_GetNCBlockData(m_hDoc, i, szBlock, sizeof(szBlock));
 		strBlock = szBlock;
 		strBlock = regex_replace(strBlock, reComment, "");

@@ -23,8 +23,11 @@ enum MSGadd
 
 class CGRBLdlg : public CDialogEx, public serial::SerialObserver
 {
-	NCVCHANDLE			m_hDoc;
-	NCDATA				m_nc;
+	NCVCHANDLE	m_hDoc;
+	NCDATA		m_nc;
+	int			m_nMaxBlock,
+				m_nMaxObject;
+
 	serial::SerialPort*	m_pCom;
 	std::string			m_strPiece,
 						m_strSend;
@@ -125,8 +128,8 @@ public:
 	static	UINT	MonitoringComportThread(LPVOID);
 	static	UINT	QueryThreadFunc(LPVOID);
 	static	UINT	CycleStartThreadFunc(LPVOID);
-	int		MainSendBlock(int, int, BOOL&);
-	int		SearchSubprogram(int, int, int);
+	int		MainSendBlock(int, BOOL&);
+	int		SearchSubprogram(int, int);
 };
 
 //

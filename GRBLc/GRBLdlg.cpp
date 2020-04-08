@@ -62,13 +62,12 @@ END_MESSAGE_MAP()
 // CGRBLdlg ダイアログ
 
 CGRBLdlg::CGRBLdlg(NCVCHANDLE hDoc) : CDialogEx(IDD_DIALOG1, NULL)
-	,m_eventQuery(FALSE, TRUE)//, m_eventCycleRecv(FALSE, TRUE)	// Manual event
 {
 	m_hDoc = hDoc;
 	m_nc.dwSize = sizeof(NCDATA);
 	m_pCom = NULL;
 	m_bQueryThread = m_bCycleThread = m_bCycleThreadSuspend = false;
-	m_pCycleThread = NULL;
+	m_pQueryThread = m_pCycleThread = NULL;
 	m_statGRBL = grblALARM;
 	m_bSingleLock = FALSE;
 }
@@ -271,9 +270,12 @@ void CGRBLdlg::OnConnect()
 	m_strPiece.clear();
 
 	m_bQueryThread = true;
-	m_eventQuery.ResetEvent();
-//	m_eventCycleRecv.ResetEvent();
-	AfxBeginThread(QueryThreadFunc, this);
+	m_pQueryThread = AfxBeginThread(QueryThreadFunc, this,
+							THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
+	if ( m_pQueryThread ) {
+		m_pQueryThread->m_bAutoDelete = FALSE;
+		m_pQueryThread->ResumeThread();
+	}
 }
 
 void CGRBLdlg::OnMsgClear()
@@ -296,14 +298,15 @@ void CGRBLdlg::OnCustomCmd()
 
 void CGRBLdlg::OnSoftReset()
 {
-	if ( m_bCycleThread ) {
+	if ( m_pCycleThread && m_bCycleThread ) {
 		m_bCycleThread = false;
 		if ( m_bCycleThreadSuspend ) {
 			m_bCycleThreadSuspend = false;
 			m_pCycleThread->ResumeThread();
 		}
-//		m_eventCycleRecv.SetEvent();
-		m_eventCycle.Lock(EVENT_TIMEOUT);
+		WaitForSingleObject(m_pCycleThread->m_hThread, INFINITE);
+		delete	m_pCycleThread;
+		m_pCycleThread = NULL;
 	}
 	SendCommand(char(0x18));
 	AddMessage("0x18", msgCmd);
@@ -387,9 +390,13 @@ void CGRBLdlg::OnCycleStart()
 		else {
 			EnableControl(false);
 			m_bCycleThread = true;
-			m_pCycleThread = AfxBeginThread(CycleStartThreadFunc, this);
-			Sleep(AfxGetGRBLcApp()->GetOption()->GetIntOpt(grblI_QueryTime));
-//			m_eventCycleRecv.SetEvent();	// first time
+			m_pCycleThread = AfxBeginThread(CycleStartThreadFunc, this,
+									THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
+			if ( m_pCycleThread ) {
+				m_pCycleThread->m_bAutoDelete = FALSE;
+				m_pCycleThread->ResumeThread();
+				Sleep(AfxGetGRBLcApp()->GetOption()->GetIntOpt(grblI_QueryTime));
+			}
 		}
 		break;
 	}
@@ -400,7 +407,7 @@ void CGRBLdlg::OnFeedHold()
 {
 	if ( m_bCycleThread && m_statGRBL==grblHOLD ) {
 		m_bCycleThread = false;
-		if ( m_bCycleThreadSuspend ) {
+		if ( m_pCycleThread && m_bCycleThreadSuspend ) {
 			m_bCycleThreadSuspend = false;
 			m_pCycleThread->ResumeThread();
 		}
@@ -408,7 +415,6 @@ void CGRBLdlg::OnFeedHold()
 		if ( dwResult == WAIT_TIMEOUT ) {
 			m_eventSingle.SetEvent();
 		}
-//		m_eventCycleRecv.SetEvent();
 		SendCommand('~');
 		AddMessage("CycleMode cancel", msgInfo);
 		EnableControl(true);
@@ -494,7 +500,11 @@ HBRUSH CGRBLdlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 LRESULT CGRBLdlg::OnCycleEnd(WPARAM, LPARAM)
 {
 	m_bCycleThread = false;
-	m_pCycleThread = NULL;
+	if ( m_pCycleThread ) {
+		WaitForSingleObject(m_pCycleThread->m_hThread, INFINITE);
+		delete	m_pCycleThread;
+		m_pCycleThread = NULL;
+	}
 	EnableControl(true);
 	m_stLine.SetWindowText("");
 	return 0;
@@ -504,7 +514,7 @@ LRESULT CGRBLdlg::OnCycleEnd(WPARAM, LPARAM)
 
 bool CGRBLdlg::Disconnect(bool bForce)
 {
-	if ( m_bCycleThread ) {
+	if ( m_pCycleThread && m_bCycleThread ) {
 		int nRet = bForce ? IDYES : AfxMessageBox("サイクル実行中ですが切断しますか？", MB_YESNO);
 		if ( nRet != IDYES )
 			return false;
@@ -513,13 +523,18 @@ bool CGRBLdlg::Disconnect(bool bForce)
 			m_bCycleThreadSuspend = false;
 			m_pCycleThread->ResumeThread();
 		}
-//		m_eventCycleRecv.SetEvent();
-		m_eventCycle.Lock(EVENT_TIMEOUT);
+		WaitForSingleObject(m_pCycleThread->m_hThread, INFINITE);
+		delete	m_pCycleThread;
+		m_pCycleThread = NULL;
 	}
 	m_bQueryThread = false;
-	m_eventQuery.Lock();
+	if ( m_pQueryThread ) {
+		WaitForSingleObject(m_pQueryThread->m_hThread, INFINITE);
+		delete	m_pQueryThread;
+		m_pQueryThread = NULL;
+	}
 #ifdef _DEBUG
-	cout << "CGRBLdlg::Disconnect() m_eventQuery.Lock() Pass\n";
+	cout << "CGRBLdlg::Disconnect() QueryThread pass\n";
 #endif
 
 	m_pCom->detach(this);
@@ -558,7 +573,6 @@ void CGRBLdlg::ResponseGRBL(const std::string& strRecv)
 		AddMessage("Resume->[Cycle Start] Stop->[Feed Hold]", msgInfo);
 		m_statGRBL = grblHOLD;	// Forced
 	}
-//	m_eventCycleRecv.SetEvent();
 }
 
 void CGRBLdlg::AddMessage(LPCTSTR lpszMsg, MSGadd e)
@@ -819,7 +833,6 @@ UINT CGRBLdlg::QueryThreadFunc(LPVOID pParam)
 		Sleep(pOpt->GetIntOpt(grblI_QueryTime));
 	}
 
-	pDlg->m_eventQuery.SetEvent();
 #ifdef _DEBUG
 	cout << "CGRBLdlg::QueryThreadFunc() end\n";
 #endif
@@ -853,8 +866,8 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 		nEndCode = pDlg->MainSendBlock(i, nMaxLoop, bTrace);
 	}
 
-	pDlg->PostMessage(WM_CYCLE_END);
 	if ( pDlg->m_bCycleThread ) {
+		pDlg->PostMessage(WM_CYCLE_END);
 		te = CTime::GetCurrentTime();
 		tSpan = te - ts;
 		CString	strTime( tSpan.Format("Total machining time %H:%M:%S") );
@@ -863,7 +876,6 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 	if ( pOpt->GetIntOpt(grblI_WithTrace) )
 		NCVC_TraceStop(pDlg->m_hDoc);
 
-	pDlg->m_eventCycle.SetEvent();
 #ifdef _DEBUG
 	cout << "CGRBLdlg::CycleStartThreadFunc() end\n";
 #endif
@@ -908,16 +920,16 @@ int CGRBLdlg::MainSendBlock(int nIndex, int nMaxLoop, BOOL& bTrace)
 	do {
 		Sleep(pOpt->GetIntOpt(grblI_QueryTime));
 	} while ( m_bCycleThread && m_statGRBL==grblRUN );
-//	m_eventCycleRecv.Lock(EVENT_TIMEOUT);		// wait response
-//	m_eventCycleRecv.ResetEvent();
 	switch ( m_statGRBL ) {
 	case grblALARM:
 		m_bCycleThread = false;	// thread end (not send)
 		break;
 	case grblHOLD:
 	case grblDOOR:
-		m_bCycleThreadSuspend = true;
-		m_pCycleThread->SuspendThread();
+		if ( m_pCycleThread ) {
+			m_bCycleThreadSuspend = true;
+			m_pCycleThread->SuspendThread();
+		}
 		break;
 	}
 	if ( !m_bCycleThread )

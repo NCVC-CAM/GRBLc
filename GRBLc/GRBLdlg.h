@@ -29,17 +29,15 @@ class CGRBLdlg : public CDialogEx, public serial::SerialObserver
 	std::string			m_strPiece,
 						m_strSend;
 
+	CWinThread*	m_pQueryThread;
+	CWinThread*	m_pCycleThread;
 	CEvent		m_eventMonitoring,
-				m_eventQuery,
-				m_eventCycle,
-				//m_eventCycleRecv,
 				m_eventSingle;
 	CCriticalSection	m_exclusionSend;
 	bool		m_bQueryThread,
 				m_bCycleThread,
 				m_bCycleThreadSuspend;
 	boost::optional<double>	m_dWCO[NCXYZ];
-	CWinThread*	m_pCycleThread;
 	GRBLstat	m_statGRBL;
 	CFont		m_fontAxis;
 

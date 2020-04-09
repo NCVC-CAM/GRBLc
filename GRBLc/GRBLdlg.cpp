@@ -187,11 +187,11 @@ void CGRBLdlg::OnCancel()
 #ifdef _DEBUG
 	cout << "CGRBLdlg::OnCancel()\n";
 #endif
-	m_eventMonitoring.SetEvent();
 	if ( m_pCom ) {
 		if ( !Disconnect() )
 			return;
 	}
+	m_eventMonitoring.SetEvent();
 //	DestroyWindow();
 	CDialogEx::OnCancel();
 }
@@ -538,8 +538,9 @@ bool CGRBLdlg::Disconnect(bool bForce)
 #endif
 
 	m_pCom->detach(this);
-	m_pCom->close();
-	delete m_pCom;
+	m_pCom->close();	// ³‚µ‚­close‚Å‚«‚Ä‚é‚©‰ö‚µ‚¢
+//		Sleep(AfxGetGRBLcApp()->GetOption()->GetIntOpt(grblI_QueryTime));
+	delete m_pCom;		// ƒTƒCƒNƒ‹’†’f‚·‚é‚Æ‚±‚±‚ÅŽ~‚Ü‚é
 	m_pCom = NULL;
 #ifdef _DEBUG
 	cout << "CGRBLdlg::Disconnect() m_pCom delete ok\n";
@@ -867,15 +868,14 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 		nEndCode = pDlg->MainSendBlock(i, bTrace);
 	}
 
-	if ( pOpt->GetIntOpt(grblI_WithTrace) )
-		NCVC_TraceStop(pDlg->m_hDoc);
-
 	if ( pDlg->m_bCycleThread ) {
 		te = CTime::GetCurrentTime();
 		tSpan = te - ts;
 		CString	strTime( tSpan.Format("Total machining time %H:%M:%S") );
 		pDlg->AddMessage(strTime, msgInfo);
 		pDlg->PostMessage(WM_CYCLE_END);
+		if ( pOpt->GetIntOpt(grblI_WithTrace) )
+			NCVC_TraceStop(pDlg->m_hDoc);
 	}
 
 #ifdef _DEBUG
@@ -928,7 +928,7 @@ int CGRBLdlg::MainSendBlock(int nIndex, BOOL& bTrace)
 		break;
 	case grblHOLD:
 	case grblDOOR:
-		if ( m_pCycleThread ) {
+		if ( m_pCycleThread && m_bCycleThread ) {
 			m_bCycleThreadSuspend = true;
 			m_pCycleThread->SuspendThread();
 		}

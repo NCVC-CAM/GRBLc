@@ -856,6 +856,7 @@ UINT CGRBLdlg::CycleStartThreadFunc(LPVOID pParam)
 	pDlg->m_nMaxBlock  = NCVC_GetNCBlockDataSize(pDlg->m_hDoc);
 	pDlg->m_nMaxObject = NCVC_GetNCDataSize(pDlg->m_hDoc);
 	if ( pOpt->GetIntOpt(grblI_WithTrace) ) {
+		NCVC_TraceStop(pDlg->m_hDoc);
 		NCVC_TracePause(pDlg->m_hDoc);
 		NCVC_TraceStart(pDlg->m_hDoc);
 		pDlg->m_nc.nLine = 0;

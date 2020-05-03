@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "boost/asio.hpp"
-#include "boost/bind.hpp"
+#include "boost/bind/bind.hpp"	// boost 1.73
 #include "boost/foreach.hpp"
 #include "boost/thread/win32/mfc_thread_init.hpp"
 #include "boost/thread.hpp"
@@ -18,6 +18,7 @@
 
 using namespace serial;
 using namespace boost::asio;
+using namespace boost::placeholders;	// boost 1.73
 using namespace std;
 
 ///
@@ -68,9 +69,9 @@ public:
 /**
 * @brief コンストラクタ
 */
-SerialPort::SerialPort()// : impl( new serial_impl() )
+SerialPort::SerialPort() : impl( new serial_impl() )
 {
-	impl = new serial_impl;
+//	impl = new serial_impl;
 	is_connect_ = false;
 }
 
@@ -81,7 +82,7 @@ SerialPort::SerialPort()// : impl( new serial_impl() )
 SerialPort::~SerialPort()
 {
 	close();
-	delete	impl;
+//	delete	impl;
 }
 
 

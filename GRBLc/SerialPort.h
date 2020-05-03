@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-//#include "boost/smart_ptr.hpp"
+#include "boost/smart_ptr.hpp"
 
 namespace boost{ namespace system{ class error_code; }; };
 #define	MAX_RECIVE_BUFFER		256
@@ -181,8 +181,8 @@ namespace serial
 	// 属性------------------------------------------------
 	private:
 		class serial_impl;
-//		boost::shared_ptr<serial_impl> impl;
-		serial_impl* impl;
+		boost::shared_ptr<serial_impl> impl;
+//		serial_impl* impl;
 
 		// 受信用バッファ
 		char rBuffer[MAX_RECIVE_BUFFER];

@@ -451,11 +451,33 @@ void CGRBLdlg::OnKillfocusMsgLst()
 
 void CGRBLdlg::OnToolTipNeedText(NMHDR* pNMHDR, LRESULT* pResult)
 {
-	TOOLTIPTEXT* pTTT = (TOOLTIPTEXT*)pNMHDR;
+	struct TOOLTIPTABLE {
+		int		nID;
+		string	strTip;
+		operator int() { return nID; }
+	};
+	static	TOOLTIPTABLE	t[] = {
+		{IDC_CONNECT,	"Ctrl+O"},
+		{IDC_UNLOCK,	"Ctrl+R"},
+		{IDC_HOMING,	"Ctrl+Home"},
+		{IDC_START,		"Ctrl+Space"},
+		{IDC_HOLD,		"Space"},
+		{IDC_JOG_LEFT,	"Ctrl+Left"},
+		{IDC_JOG_RIGHT,	"Ctrl+Right"},
+		{IDC_JOG_FRONT,	"Ctrl+Up"},
+		{IDC_JOG_BACK,	"Ctrl+Down"},
+		{IDC_JOG_UP,	"Ctrl+PageUp"},
+		{IDC_JOG_DOWN,	"Ctrl+PageDown"}
+	};
 
+	TOOLTIPTEXT* pTTT = (TOOLTIPTEXT*)pNMHDR;
 	if ( pTTT->uFlags & TTF_IDISHWND ) {
 		int nID = ::GetDlgCtrlID((HWND)pTTT->hdr.idFrom);
-		if ( IDC_CMD_CUSTOM1<=nID && nID<=IDC_CMD_CUSTOM3 ) {
+		auto it = find(begin(t), end(t), nID);
+		if ( it != end(t) ) {
+			lstrcpy(pTTT->szText, it->strTip.c_str());
+		}
+		else if ( IDC_CMD_CUSTOM1<=nID && nID<=IDC_CMD_CUSTOM3 ) {
 			CGRBLcOption* pOpt = AfxGetGRBLcApp()->GetOption();
 			string	strCmd = pOpt->GetStringOpt(nID-IDC_CMD_CUSTOM1);
 			if ( !strCmd.empty() ) {

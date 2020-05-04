@@ -515,9 +515,14 @@ LRESULT CGRBLdlg::OnCycleEnd(WPARAM, LPARAM)
 bool CGRBLdlg::Disconnect(bool bForce)
 {
 	if ( m_pCycleThread && m_bCycleThread ) {
-		int nRet = bForce ? IDYES : AfxMessageBox("サイクル実行中ですが切断しますか？", MB_YESNO);
-		if ( nRet != IDYES )
+		SendCommand('!');		// HOLD(pause)
+		AddMessage("!", msgCmd);
+		int nRet = bForce ? IDYES : AfxMessageBox(IDS_MSG_CYCLE_INTERRUPTION, MB_YESNO|MB_ICONQUESTION);
+		if ( nRet != IDYES ) {
+			SendCommand('~');	// Resume
+			AddMessage("~", msgCmd);
 			return false;
+		}
 		m_bCycleThread = false;
 		if ( m_bCycleThreadSuspend ) {
 			m_bCycleThreadSuspend = false;
@@ -537,10 +542,8 @@ bool CGRBLdlg::Disconnect(bool bForce)
 	cout << "CGRBLdlg::Disconnect() QueryThread pass\n";
 #endif
 
-	m_pCom->detach(this);
-	m_pCom->close();	// 正しくcloseできてるか怪しい
-//		Sleep(AfxGetGRBLcApp()->GetOption()->GetIntOpt(grblI_QueryTime));
-	delete m_pCom;		// サイクル中断するとここで止まる
+	m_pCom->close();
+	delete m_pCom;	// ここでたまに止まる
 	m_pCom = NULL;
 #ifdef _DEBUG
 	cout << "CGRBLdlg::Disconnect() m_pCom delete ok\n";

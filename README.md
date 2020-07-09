@@ -9,4 +9,4 @@ NCVC add-in that can communicate with Grbl1.1(Arduino CNC)
 Visual Studio 2015 Solution
 
 ## License
-"GRBLc" is under [BSD license (3-clause BSD License)] (https://github.com/NCVC-CAM/GRBLc/LICENSE)
+"GRBLc" is under [BSD license (3-clause BSD License)]

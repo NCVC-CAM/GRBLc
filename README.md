@@ -2,8 +2,8 @@
 NCVC add-in that can communicate with Grbl1.1(Arduino CNC)
 
 ## Requirement
-* NCVC SDK
-* Boost C++ 1.78.0 or later
+* NCVC.SDK <https://github.com/NCVC-CAM/NCVC.SDK>
+* Boost C++ 1.78.0 or later <https://www.boost.org/>
 
 ## Usage
 Visual Studio 2022 Solution

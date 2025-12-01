@@ -55,7 +55,7 @@ public:
 	boost::mutex recv_sync;
 
 	// ƒVƒŠƒAƒ‹‚Ìİ’èŒn“
-	io_service		io;
+	io_context		io;
 	string			com;
 	serial_port*	serial_port;
 	serial_port_base::baud_rate br;

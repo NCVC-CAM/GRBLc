@@ -85,7 +85,7 @@ void CGRBLcSetup::OnOK()
 		pOpt->m_strOption[grblS_Comport] = LPCTSTR(strBuf);
 	}
 	else {
-		pOpt->m_strOption[grblS_Comport].empty();
+		pOpt->m_strOption[grblS_Comport].clear();
 	}
 	pOpt->m_fJogStep = m_edJogStep;
 	pOpt->m_nJogFeed = m_edJogFeed;

@@ -129,7 +129,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\GRBLc.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x64\debug;$(SolutionDir)\..\..\..\boost\lib64-msvc-14.3;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>NCVC.lib</AdditionalDependencies>
     </Link>
     <Midl>
@@ -161,7 +161,7 @@
       <ModuleDefinitionFile>.\GRBLc.def</ModuleDefinitionFile>
       <AdditionalDependencies>NCVC.lib</AdditionalDependencies>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x86;$(SolutionDir)\..\..\..\boost\lib32-msvc-14.3;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -192,7 +192,7 @@
       <ModuleDefinitionFile>.\GRBLc.def</ModuleDefinitionFile>
       <AdditionalDependencies>NCVC.lib</AdditionalDependencies>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\lib\x64;$(SolutionDir)\..\..\..\boost\lib64-msvc-14.3;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
